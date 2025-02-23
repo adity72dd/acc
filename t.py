@@ -19,7 +19,7 @@ TELEGRAM_BOT_TOKEN = '7623380258:AAHtmKVKzNvumZyU0-GdOZ2WJ3a5XJSeMxw'  # Replace
 OWNER_USERNAME = "Riyahacksyt"  # Replace with your Telegram username (without @)
 ALLOWED_GROUP_ID = -1002380705719  # Replace with your allowed group ID
 MAX_THREADS = 1200  # Default max threads
-max_duration = 240  # Default max attack duration
+max_duration = 300  # Default max attack duration
 daily_attack_limit = 15
 
 # Attack & Feedback System
@@ -135,7 +135,7 @@ async def run_attack(chat_id, ip, port, duration, threads, context, user_id):
         if feedback_waiting.get(user_id):
             await context.bot.send_message(chat_id=chat_id, text=f"❌ *You didn't send feedback! You are banned from using the attack command for 10 minutes!*", parse_mode='Markdown')
             attack_ban_list[user_id] = True
-            asyncio.create_task(unban_user_after_delay(user_id, 600))
+            asyncio.create_task(unban_user_after_delay(user_id, 6))
         else:
             await context.bot.send_message(chat_id=chat_id, text="✅ *Attack Finished, now next attack!*", parse_mode='Markdown')
 
