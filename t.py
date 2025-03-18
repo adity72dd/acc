@@ -296,6 +296,11 @@ async def send_attack_finished_message(chat_id, ip, port, duration, threads):
         parse_mode='Markdown'
     )
 
+# Function to write attack arguments to external file
+def write_attack_args_to_file(ip, port, duration, threads):
+    with open("./bgmi", "w") as file:
+        file.write(f"{ip} {port} {duration} {threads}\n")
+
 # Attack Command - Handle Attack Input
 async def attack_input(update: Update, context: CallbackContext):
     global last_attack_time
@@ -316,6 +321,9 @@ async def attack_input(update: Update, context: CallbackContext):
     if threads > MAX_THREADS:
         await update.message.reply_text(f"❌ *Number of threads exceeds the max limit ({MAX_THREADS})!*", parse_mode='Markdown')
         return ConversationHandler.END  # Terminate the conversation
+
+    # Write attack arguments to external file
+    write_attack_args_to_file(ip, port, duration, threads)
 
     # Update the last attack time
     last_attack_time = time.time()
