@@ -21,7 +21,7 @@ OWNER_USERNAME = "Riyahacksyt"  # Replace with your Telegram username (without @
 ALLOWED_GROUP_ID = -1002283210199  # Replace with your allowed group ID
 MAX_THREADS = 2000  # Default max threads
 max_duration = 200  # Default max attack duration
-daily_attack_limit = 3
+daily_attack_limit = 30
 
 # Attack & Feedback System
 attack_running = False
